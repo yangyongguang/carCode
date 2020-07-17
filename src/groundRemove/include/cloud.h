@@ -89,13 +89,19 @@ public:
     inline const Eigen::Vector3f& AsEigenVector() const {return _point; }
     inline Eigen::Vector3f& AsEigenVector() { return _point; }
 
+    inline float tan2() {return atan2(_point.y(), _point.x());}
+
     void operator=(const point& other);
     void operator=(const Eigen::Vector3f& other);
     bool operator==(const point& other) const;
     inline point operator-(const point& other){
         return point(this->x() - other.x(), this->y() - other.y(), this->z() - other.z());}
+    
+    inline point operator-(const point& other) const {
+        return point(this->x() - other.x(), this->y() - other.y(), this->z() - other.z());}
     inline point operator+(const point& other){
         return point(this->x() + other.x(), this->y() + other.y(), this->z() + other.z());}
+
     inline point operator+(const point& other) const{
         return point(this->x() + other.x(), this->y() + other.y(), this->z() + other.z());}
     inline point add(const point & other) const {
@@ -148,6 +154,11 @@ public:
     inline void sort(){std::sort(_points.begin(), _points.end(), 
         [](const point & a, const point & b){return a.toSensor2D < b.toSensor2D;});}
     
+    inline void sortClockWise() {        // 按逆时针对 bbox 进行排序， 以供后续使用
+        auto midPoint = (_points[0] + _points[2]) * 0.5;
+		auto compFun = [midPoint](const point & p1, const point & p2) {return (p1 - midPoint).tan2() < (p2 - midPoint).tan2();};
+		std::sort(_points.begin(), _points.end(), compFun);}
+
     typedef std::shared_ptr<Cloud> Ptr;
     typedef std::shared_ptr<const Cloud> ConstPtr;
 private:
@@ -253,6 +264,7 @@ public:
 public:
     Pose pose;
     std::array<point, 4> points;
+    // std::vector<point> points;
     string label = "unknown";
     /*Behavior State of the Detected Object
     behavior_state # 

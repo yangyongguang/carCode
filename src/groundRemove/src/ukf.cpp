@@ -1464,18 +1464,55 @@ void UKF::update(const bool use_sukf, const double detection_probability, const 
 
 Eigen::VectorXd UKF::printUKFInfo() const
 {
-  fprintf(stderr, "------------ ukf -------------\n");
-  fprintf(stderr, "is_static_: %d\n: ", is_static_);
-  fprintf(stderr, "is_stable_: %d\n", is_stable_);
-  fprintf(stderr, "ukf_id_： %d\n", ukf_id_);
-  fprintf(stderr, "x_merge : %f, %f, %f, %f, %f\n", 
-          x_merge_(0), x_merge_(1), x_merge_(2), x_merge_(3), x_merge_(4));
-  fprintf(stderr, "tracking_num_: %d (number tracking frame)\n", tracking_num_);
-  return x_merge_;
-  // fprintf(stderr, "");
+	fprintf(stderr, "------------ ukf -------------\n");
+	fprintf(stderr, "is_static_: %d\n: ", is_static_);
+	fprintf(stderr, "is_stable_: %d\n", is_stable_);
+	fprintf(stderr, "ukf_id_： %d\n", ukf_id_);
+	fprintf(stderr, "x_merge : %f, %f, %f, %f, %f\n", 
+			x_merge_(0), x_merge_(1), x_merge_(2), x_merge_(3), x_merge_(4));
+	fprintf(stderr, "tracking_num_: %d (number tracking frame)\n", tracking_num_);
+	return x_merge_;
+	// fprintf(stderr, "");
 }
 
 void UKF::ArrangeBBoxByTheta()
 {
+	double & ori = x_merge_(3);
+	Point2f veloDire = Point2f(std::cos(ori), std::sin(ori));
+
+	auto& bbox = object_;
+	// 先顺时针全排列
+	size_t maxThetaIdx = 0U;
+	float cosThetaMax = -FLT_MAX;
+	Point2f maxVec = Point2f(0.0F, 0.0F);
+	for (size_t ptIdx = 0; ptIdx < 4U; ++ptIdx)
+	{
+		auto tmpVec = bbox[(ptIdx + 1) % 4U] - bbox[ptIdx];
+		Point2f currVec = Point2f(tmpVec.x(), tmpVec.y());
+		float cosTheta = veloDire.dot(currVec) / std::sqrt((currVec.x * currVec.x + currVec.y * currVec.y + 1e-4));
+		if (cosTheta > cosThetaMax) {
+			cosThetaMax = cosTheta;
+			maxThetaIdx = ptIdx;
+
+			maxVec = currVec;
+		}
+	}
 	
+	maxThetaIdx = (maxThetaIdx + 1) % 4U;
+	if (maxThetaIdx > 0) {
+		while (maxThetaIdx--) {
+			auto headPt = bbox.points[0];
+			for (int idx = 0; idx < 3U; ++idx)
+			{
+				bbox.points[idx] = bbox.points[idx + 1];
+			}
+			bbox.points[3] = headPt;
+		}
+	}
+
+	if (debugBool) {
+		fprintf(stderr, "veloDire (%f, %f)\n", veloDire.x, veloDire.y);
+		fprintf(stderr, "maxVec (%f, %f)\n", maxVec.x, maxVec.y);
+		fprintf(stderr, "maxThetaIdx %d, theta %f\n", maxThetaIdx, cosThetaMax);
+	}
 }

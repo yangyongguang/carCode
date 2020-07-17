@@ -76,9 +76,8 @@ void ImmUkfPda::callback(const std::vector<BBox>& input,
 	// update trans matrix
 	updateTransMatrix(transL2G);
 	// transformPoseToGlobal(input, transformed_input, currentFrame);
-
 	transformed_input.assign(input.begin(), input.end());
-	// 全局 bbox 输入跟踪
+
 	tracker(transformed_input, detected_objects_output, currentFrame, ts, connectPoints, roateEllipseVec);
 	// 还原
 	transformPoseToLocal(detected_objects_output, currentFrame, trackerBBox);
@@ -1388,6 +1387,8 @@ void ImmUkfPda::tracker(const std::vector<BBox>& input,
 		connectPoints->emplace_back(point(targets_[i].x_merge_(0),      targets_[i].x_merge_(1),      -1.72f));
 		// connectPoints->emplace_back(point(targets_[i].x_rm_(0),         targets_[i].x_rm_(1),         -1.72f));
 		// fprintf(stderr, "target id %d, length %f, width %f\n", i, targets_[i].length_, targets_[i].width_);
+		// 根据速度方向， 重新排列 bbox 点的顺序
+		targets_[i].ArrangeBBoxByTheta();
 		// 添加椭圆
 		roateEllipseVec.emplace_back(rotateEllipse(targets_[i].x_ctrv_, targets_[i].p_ctrv_, EllipeType::MERGE));
 		if (trackId_ == targets_[i].ukf_id_)

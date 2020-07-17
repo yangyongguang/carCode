@@ -141,4 +141,7 @@ void getBBoxRefPoint(const vector<Cloud::Ptr> & clusteredPoints,
 
 //  获取点云的面积
 float getCloudBBoxArea(const Cloud & bbox);
+
+// 排序点云
+void sortClockWise(std::vector<Point2f> & bbox);
 #endif //MY_PCL_TUTORIAL_BOX_FITTING_H

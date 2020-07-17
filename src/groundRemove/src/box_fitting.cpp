@@ -944,6 +944,7 @@ void getBBox(const vector<Cloud::Ptr> & clusteredPoints,
             clusteredPoints[iCluster]->maxZ - clusteredPoints[iCluster]->minZ, 
             clusteredPoints[iCluster]->size());
         
+        sortClockWise(pcPoints);
         // 不进行保存 bbox
         if (!saveIt)
             continue;   
@@ -1201,6 +1202,14 @@ float getCloudBBoxArea(const Cloud & bbox)
     return len2 * len1;
 }
 
+void sortClockWise(std::vector<Point2f> & bbox)
+{
+    Point2f midPoint = (bbox[0] + bbox[2]) * 0.5;
+    auto fun = [midPoint](const Point2f & p1, const Point2f & p2) {
+        return std::atan2((p1 - midPoint).y, (p1 - midPoint).x) > std::atan2((p2 - midPoint).y , (p2 - midPoint).x);};
+    std::sort(bbox.begin(), bbox.end(), fun);
+}
+
 void getBBoxRefPoint(const vector<Cloud::Ptr> & clusteredPoints, 
                            vector<Cloud::Ptr> & bbPoints,
                            std::unordered_map<int, int> & bboxToCluster, 
@@ -1225,6 +1234,7 @@ void getBBoxRefPoint(const vector<Cloud::Ptr> & clusteredPoints,
     for (int bboxIdx = 0; bboxIdx < bbPoints.size(); ++bboxIdx)
     {
         auto & bbox = (*bbPoints[bboxIdx]);
+        // 排序之后
         Cloud bboxTmp = bbox;  // 备份， 防止改值, 比如排序使用这种情况
         int clusterIdx = bboxToCluster[bboxIdx];
         // 表示多个 bbox 交叉的情况， 被剔除掉了
