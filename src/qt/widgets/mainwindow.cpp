@@ -124,7 +124,7 @@ MainWindow::MainWindow(QWidget *parent):
     // 创建图像显示窗口
     ui->girdNumSB->setSingleStep(60);
     ui->girdNumSB->setRange(120, 1200);
-    ui->girdNumSB->setValue(500);
+    ui->girdNumSB->setValue(600);
     // 
     ui->bboxCB->setChecked(true);
 
@@ -775,13 +775,14 @@ std::vector<BBox> MainWindow::CloudToBBoxs(const std::vector<Cloud::Ptr> & bboxP
         //                 bbox.pose.position.x, bbox.pose.position.y, bbox.dimensions.x, bbox.dimensions.y);
         //     continue;
         // }
+        bbox.setRp();
         res.emplace_back(bbox);
     }
     // 添加自车的跟踪轨迹
-    point pt1 = transPointL2G(point(2.5f,   1.3f,  0.0f));
-    point pt2 = transPointL2G(point(2.5f,  -1.3f,  0.0f));
-    point pt3 = transPointL2G(point(-2.5f, -1.3f,  0.0f));
-    point pt4 = transPointL2G(point(-2.5f,  1.3f,  0.0f));
+    point pt1 = transPointL2G(point(1.5f,   0.8f,  0.0f));
+    point pt2 = transPointL2G(point(1.5f,  -0.8f,  0.0f));
+    point pt3 = transPointL2G(point(-1.5f, -0.8f,  0.0f));
+    point pt4 = transPointL2G(point(-1.5f,  0.8f,  0.0f));
     auto selfBBox = BBox(pt1, pt2, pt3, pt4);
     selfBBox.minZ = -1.73f;
     selfBBox.maxZ = 0.0f;

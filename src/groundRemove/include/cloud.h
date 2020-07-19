@@ -260,6 +260,8 @@ public:
     void updateCenterAndYaw();
     // fprintf(stderr, "pointIdx %d, points[pointIdx](%f, %f)\n", pointIdx, points[pointIdx].x(), points[pointIdx].y());
     point getRefPoint() const;
+    // 设置 rp 点， 后续不需要多次装换
+    void setRp();
 
 public:
     Pose pose;
@@ -298,6 +300,8 @@ public:
     int refIdx = -1;
     // I L S MinArea
     shapeType shape = shapeType::LSHAPE;
+    // isArrange
+    point rp;
 };
 
 struct intToPoint

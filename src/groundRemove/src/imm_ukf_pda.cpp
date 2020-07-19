@@ -261,9 +261,9 @@ void ImmUkfPda::measurementValidation(const std::vector<BBox>& input, UKF& targe
 	{
         // double x = input[i].pose.position.x;
         // double y = input[i].pose.position.y;
-        point refPoint = input[i].getRefPoint();
-        double x = refPoint.x();
-        double y = refPoint.y();
+        // point refPoint = input[i].getRefPoint();
+        // double x = refPoint.x();
+        // double y = refPoint.y();
         Eigen::VectorXd meas = Eigen::VectorXd(2);
 		// here
 		point nearestPt = getNearestPoint(input[i], max_det_z(0), max_det_z(1));
@@ -323,13 +323,28 @@ void ImmUkfPda::measurementValidation(const std::vector<BBox>& input, UKF& targe
 		fprintf(stderr, "target.object size (%f, %f)\n", target.object_.dimensions.x, target.object_.dimensions.y);
 		fprintf(stderr, "length %f, width %f\n", target.length_, target.width_);
 	}
-	if (target.object_.dimensions.x > target.length_)
-	{
-		target.length_ = target.object_.dimensions.x;
+
+	// 获得对应的 object_ 后， 根据上一帧的速度， 直接排序长宽， 且
+	// 标定好 rp 点顺序
+	// 经过速度重新排列后的长宽
+	if (target.tracking_num_ == TrackingState::Stable) {
+		target.ArrangeBBoxByTheta();
 	}
-	if (target.object_.dimensions.y > target.width_)
-	{
-		target.width_ = target.object_.dimensions.y;
+	if (target.isArrangeByVelocity)	{
+		auto & bbox = target.object_;
+		auto lenVec = bbox[0] - bbox[3];
+		auto widVec = bbox[0] - bbox[1];
+		float tmpLength = std::sqrt(lenVec.x() * lenVec.x() + lenVec.y() * lenVec.y());
+		float tmpWidth = std::sqrt(widVec.x() * widVec.x() + widVec.y() * widVec.y());
+		if (target.ukf_id_ == trackId_) {
+			fprintf(stderr, "tmpLength : %f\ntmpWidth : %f\n", tmpLength, tmpWidth);
+		}
+		target.length_ = std::max(target.length_, tmpLength);
+		target.width_ = std::max(target.width_, tmpWidth);
+	} else {
+		// 没有速度确认， 只能信任当前测量值
+		target.length_ = std::max(target.object_.dimensions.x, target.object_.dimensions.y);
+		target.width_ = std::min(target.object_.dimensions.x, target.object_.dimensions.y);
 	}
 	if (target.ukf_id_ == trackId_)
 	// if (1)
@@ -491,7 +506,8 @@ void ImmUkfPda::initTracker(const std::vector<BBox>& input, double timestamp)
 	{
 		// 更改 ref 点， 将其作为 measure 的输入
 		// point refPoint = input[i].getRefPoint();
-		point refPoint = input[i].getRefPoint();
+		// point refPoint = input[i].getRefPoint();
+		point refPoint = input[i].rp;
 		double px = refPoint.x();
 		double py = refPoint.y();
 		if (DEBUG)
@@ -525,6 +541,7 @@ void ImmUkfPda::initTracker(const std::vector<BBox>& input, double timestamp)
 		}
 		
 		// ukf.initialize(init_meas, timestamp, target_id_);
+		// 初始的 bbox 的 refIdx 后面每次关联一次需要跟新 refIdx
 		ukf.refIdx_ = input[i].refIdx;
 
 		ukf.initialize(init_meas, timestamp, allocteID);
@@ -566,7 +583,8 @@ void ImmUkfPda::secondInit(UKF& target, const std::vector<BBox>& object_vec, dou
 	}
 	else
 	{
-		point refPoint = object_vec[0].getRefPoint();
+		// point refPoint = object_vec[0].getRefPoint();
+		point refPoint = object_vec[0].rp;
 		target_x = refPoint.x();
 		target_y = refPoint.y();
 	}
@@ -737,7 +755,8 @@ void ImmUkfPda::makeNewTargets(const double timestamp, const std::vector<BBox>& 
 		if (matching_vec[i] == false)
 		{
 			// 测量值
-			point refPoint = input[i].getRefPoint();
+			// point refPoint = input[i].getRefPoint();
+			point refPoint = input[i].rp;
 			double px = refPoint.x();
 			double py = refPoint.y();
 			// double px = input[i].pose.position.x;
@@ -880,13 +899,15 @@ ImmUkfPda::removeRedundantObjects(const std::vector<BBox>& in_detected_objects,
 		// point pt(in_detected_objects[i].pose.position.x, 
 		//          in_detected_objects[i].pose.position.y, 
 		//          in_detected_objects[i].pose.position.z);
-		point pt = in_detected_objects[i].getRefPoint();
+		// point pt = in_detected_objects[i].getRefPoint();
+		point pt = in_detected_objects[i].rp;
 		if(!isPointInPool(centroids, pt))
 		{
 			// point pt(in_detected_objects[i].pose.position.x, 
 			//          in_detected_objects[i].pose.position.y, 
 			//          in_detected_objects[i].pose.position.z);
-			point pt = in_detected_objects[i].getRefPoint();
+			// point pt = in_detected_objects[i].getRefPoint();
+			point pt = in_detected_objects[i].rp;
 			centroids.push_back(pt);
 		}
 	}
@@ -903,7 +924,8 @@ ImmUkfPda::removeRedundantObjects(const std::vector<BBox>& in_detected_objects,
 		for(size_t i=0; i< centroids.size(); i++)
 		{
 			// point pt(object.pose.position.x, object.pose.position.y, object.pose.position.z);
-			point pt = object.getRefPoint();
+			// point pt = object.getRefPoint();
+			point pt = object.rp;
 			// merge_distance_threshold_ ==> 0.5
 			if (arePointsClose(pt, centroids[i], merge_distance_threshold_))
 			{
@@ -1115,7 +1137,7 @@ void ImmUkfPda::makeOutput(const std::vector<BBox>& input,
 		dd.yaw = tyaw;
 		if (trackId_ == targets_[i].ukf_id_)
 		{
-			fprintf(stderr, "targets_[i].length_ %f, targets_[i].width_ %f\n", 
+			fprintf(stderr, "\ntargets_[i].length_ %f, targets_[i].width_ %f\n", 
 						targets_[i].length_, targets_[i].width_);
 		}
 		
@@ -1371,7 +1393,7 @@ void ImmUkfPda::tracker(const std::vector<BBox>& input,
 		bool success = probabilisticDataAssociation(input, dt, matching_vec, object_vec, targets_[i]);
 		if (!success)
 		{
-			fprintf(stderr, "current track id : %d  no object to associate\n", targets_[i].ukf_id_);
+			fprintf(stderr, " |-%d-|", targets_[i].ukf_id_);
 			// connectPoints->emplace_back(point(targets_[i].x_cv_(0),         targets_[i].x_cv_(1),         -1.72f));
 			connectPoints->emplace_back(point(targets_[i].x_ctrv_(0),       targets_[i].x_ctrv_(1),       -1.72f));
 			// connectPoints->emplace_back(point(targets_[i].x_rm_(0),         targets_[i].x_rm_(1),         -1.72f));
@@ -1387,8 +1409,6 @@ void ImmUkfPda::tracker(const std::vector<BBox>& input,
 		connectPoints->emplace_back(point(targets_[i].x_merge_(0),      targets_[i].x_merge_(1),      -1.72f));
 		// connectPoints->emplace_back(point(targets_[i].x_rm_(0),         targets_[i].x_rm_(1),         -1.72f));
 		// fprintf(stderr, "target id %d, length %f, width %f\n", i, targets_[i].length_, targets_[i].width_);
-		// 根据速度方向， 重新排列 bbox 点的顺序
-		targets_[i].ArrangeBBoxByTheta();
 		// 添加椭圆
 		roateEllipseVec.emplace_back(rotateEllipse(targets_[i].x_ctrv_, targets_[i].p_ctrv_, EllipeType::MERGE));
 		if (trackId_ == targets_[i].ukf_id_)

@@ -109,3 +109,26 @@ point BBox::getRefPoint() const
         return (firstPt + secondPt) * 0.5;
     }    
 }
+
+void BBox::setRp() {
+        // fprintf(stderr, "refIdx, refIdx / 10, refIdx % 10 : %d, %d, %d, \n", 
+    //             refIdx, refIdx / 10, refIdx % 10);
+    // 角点
+    if (refIdx < 4)  // egg 2
+    {
+        rp = points[refIdx];
+    } // 边点
+    else if (refIdx > 9 && refIdx < 99) // egg 21
+    {
+        point firstPt = points[refIdx % 10];
+        point secondPt = points[refIdx / 10];
+        rp = ((firstPt + secondPt) * 0.5);
+    } // 参考边
+    else // egg 210
+    {
+        // 暂时返回该边的中点
+        point firstPt = points[refIdx / 100];
+        point secondPt = points[refIdx / 10 % 10];
+        rp = ((firstPt + secondPt) * 0.5);
+    }   
+}

@@ -256,7 +256,7 @@ void Viewer::displayText()
             for (size_t ptIdx = 0; ptIdx < 4U; ++ptIdx) {
                 auto& pos = bbox[ptIdx];
                 QString cornerNumStr = QString::number(ptIdx * 2);
-                const qglviewer::Vec &cornerPos = camera()->projectedCoordinatesOf(qglviewer::Vec(pos.x(), pos.y(), pos.z()));
+                const qglviewer::Vec &cornerPos = camera()->projectedCoordinatesOf(qglviewer::Vec(pos.x(), pos.y(), -1.73F));
                 QGLViewer::drawText(cornerPos.x, cornerPos.y, cornerNumStr, ft);
             }
         }

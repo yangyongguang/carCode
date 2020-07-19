@@ -8,6 +8,8 @@
 #include "cloud.h"
 #include "paths.h"
 #include "param.h"
+#include <iostream>
+#include <unordered_map>
 
 enum TrackingState : int
 {
@@ -34,6 +36,7 @@ class UKF
   */
 
 public:
+  static std::unordered_map<int, int> refMap;
   // 检测对象的 ID
   int ukf_id_;
 
@@ -226,8 +229,12 @@ public:
   float width_;
   float length_;
   int refIdx_;
+
+  // 是否经过速度重新排列的车
+  float isArrangeByVelocity = false;
 public:
   bool debugBool = false;
+  bool rpValid = false;
   /**
    * Constructor
    */

@@ -4,6 +4,9 @@
 * Initializes Unscented Kalman filter
  */
 
+std::unordered_map<int, int> UKF::refMap = {{0, 0}, {1, 2}, {2, 4}, {3, 6},
+											{10, 1}, {21, 3}, {32, 5}, {30, 7}, {20, 8},
+											{100, 1}, {210, 3}, {320, 5}, {300, 7}};
 UKF::UKF()
   : num_state_(5)
   , num_lidar_state_(2)
@@ -731,24 +734,26 @@ void UKF::updateMeasurementForCTRV(const std::vector<BBox>& object_vec)
   std::vector<Eigen::VectorXd> meas_vec;
   for (auto const& object : object_vec)
   {
+	assert(object_vec.size() == 1);
     Eigen::VectorXd meas;
     if (is_direction_ctrv_available_)
     {
       meas = Eigen::VectorXd(num_lidar_direction_state_);
       // meas << object.pose.position.x, object.pose.position.y, object.angle;
       // 更改 refIdx 点
-      point refPoint = object.getRefPoint();
+      // point refPoint = object.getRefPoint();
+      point refPoint = object.rp;
       meas << refPoint.x(), refPoint.y(), object.pose.yaw;
       meas_vec.push_back(meas);
       Eigen::VectorXd diff_ctrv = meas - z_pred_lidar_direction_ctrv_;
       double e_ctrv = exp(-0.5 * diff_ctrv.transpose() * s_lidar_direction_ctrv_.inverse() * diff_ctrv);
       e_ctrv_vec.push_back(e_ctrv);
     }
-    else
-    {
+    else {
       meas = Eigen::VectorXd(num_lidar_state_);
       // meas << object.pose.position.x, object.pose.position.y;
-      point refPoint = object.getRefPoint();
+      // point refPoint = object.getRefPoint();
+      point refPoint = object.rp;
       meas << refPoint.x(), refPoint.y();
       meas_vec.push_back(meas);
       Eigen::VectorXd diff_ctrv = meas - z_pred_ctrv_;
@@ -764,8 +769,10 @@ void UKF::updateMeasurementForCTRV(const std::vector<BBox>& object_vec)
   }
   else
   {
+	// 选择的测量方式
     ctrv_meas_ = meas_vec[max_ctrv_ind];
   }
+  refIdx_ = object_.refIdx;
 }
 
 void UKF::updateForCTRV()
@@ -1468,6 +1475,7 @@ Eigen::VectorXd UKF::printUKFInfo() const
 	fprintf(stderr, "is_static_: %d\n: ", is_static_);
 	fprintf(stderr, "is_stable_: %d\n", is_stable_);
 	fprintf(stderr, "ukf_id_： %d\n", ukf_id_);
+	fprintf(stderr, "rp num: %d\n", refIdx_);
 	fprintf(stderr, "x_merge : %f, %f, %f, %f, %f\n", 
 			x_merge_(0), x_merge_(1), x_merge_(2), x_merge_(3), x_merge_(4));
 	fprintf(stderr, "tracking_num_: %d (number tracking frame)\n", tracking_num_);
@@ -1477,6 +1485,9 @@ Eigen::VectorXd UKF::printUKFInfo() const
 
 void UKF::ArrangeBBoxByTheta()
 {
+	// 跟新参考点
+	refIdx_ = object_.refIdx;
+	// 
 	double & ori = x_merge_(3);
 	Point2f veloDire = Point2f(std::cos(ori), std::sin(ori));
 
@@ -1499,6 +1510,29 @@ void UKF::ArrangeBBoxByTheta()
 	}
 	
 	maxThetaIdx = (maxThetaIdx + 1) % 4U;
+	isArrangeByVelocity = true;
+	if (refIdx_ > 99) {
+		rpValid = false;
+	} else {
+		rpValid = true;
+	}
+	if (debugBool) {
+		fprintf(stderr, "before origin refPoint : %d\n", refIdx_);
+	}
+	refIdx_ = refMap[refIdx_];
+	if (debugBool) {
+		fprintf(stderr, "before refPoint : %d\n", refIdx_);
+	}
+	refIdx_ = (refIdx_ - 2 * maxThetaIdx) % 8;
+	if (refIdx_ < 0) {
+		refIdx_ += 8U;
+	}
+
+	
+	if (debugBool) {
+		fprintf(stderr, "after refPoint : %d\n", refIdx_);
+	}
+
 	if (maxThetaIdx > 0) {
 		while (maxThetaIdx--) {
 			auto headPt = bbox.points[0];
