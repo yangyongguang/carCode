@@ -17,6 +17,12 @@
 #include <fstream>
 #include <ostream>
 
+
+/// garb windows
+#include <QScreen>
+#include <QPixmap>
+
+
 MainWindow::MainWindow(QWidget *parent):
     // QWidget(parent),
     BaseViewerWidget(parent),
@@ -606,7 +612,22 @@ void MainWindow::onSliderMovedTo(int cloud_number)
         // 强制刷新一次， 将当前添加的内容显示完全
         _viewer->setBBoxs(trackerBBoxPts); // 可视化id velocity 等信息 提供给全局使用
         _viewer->update();
-        
+
+
+        // winId()截图的控件的winID，主窗口为0
+        // QScreen *screen = QGuiApplication::primaryScreen();
+        // QPixmap pixmap = screen->grabWindow(_viewer->winId());
+        // std::cout << "pixelmap:" << pixmap.width() << ", " << pixmap.height() << std::endl;
+        // char save_file_name[256] = {0};
+        // sprintf(save_file_name, "./img/%06d.png", cloud_number);
+        // QFile file(save_file_name);
+        // file.open(QIODevice::WriteOnly);
+        // bool saveBool = pixmap.save(&file);
+        // // bool saveBool = pixmap.save(save_file_name, ".jpg");     
+        // if (saveBool) {
+        //     fprintf(stderr, "save img success\n");
+        //     std::cout << "save file to :"<< save_file_name << std::endl;   
+        // }        
     }
 
     cv::Mat visImage, depthImage;
@@ -647,6 +668,16 @@ void MainWindow::onSliderMovedTo(int cloud_number)
         // _viewer->selection.clear();
     }
 
+    // 显示环视图 Cylind panno 
+    Cloud::Ptr rangeCloud(new Cloud);
+    for (size_t rangeIdx = 0U; rangeIdx < _cloud->size(); ++rangeIdx) {
+        // draw range Image
+        point& orig = (*_cloud)[rangeIdx];
+        rangeCloud->emplace_back(point(orig.x(), orig.y(), orig.z(), pointType::Cylind));
+    }
+    Eigen::Vector3f color;
+    color << 1.0, 0.0, 0.0;
+    _viewer->AddDrawable(DrawableCloud::FromCloud(rangeCloud, color, 1.8f), "DrawSelecAbleCloud");
     if (ui->groundCB->isChecked())
     {
         Eigen::Vector3f color;
@@ -722,6 +753,7 @@ void MainWindow::onSliderMovedTo(int cloud_number)
     // imgShowCV.resize(imgShowCV.rows / 2, imgShowCV.cols / 2);
     QImage qimage = utils::MatToQImage(imgShowCV);
     dock_Image->resize(qimage.width(), qimage.height());
+
     imgLabel->setPixmap(QPixmap::fromImage(qimage));
     imgLabel->resize(qimage.width(), qimage.height());
 

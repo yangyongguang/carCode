@@ -418,14 +418,20 @@ BBox ImmUkfPda::makeNewBBoxSize(const UKF & target,
 {
 	float length = target.length_;
 	float width = target.width_;
-	fprintf(stderr, "target.x_merge_(0) : %f, target.x_merge_(1) : %f, target.length_ : %f, target.width_ : %f\n",
-				target.x_merge_(0), target.x_merge_(1), target.length_, target.width_);
-	fprintf(stderr, "target object dimension (%f, %f)\n",
-				target.object_.dimensions.x, target.object_.dimensions.y);
+	if (target.ukf_id_ == trackId_) {
+		fprintf(stderr, "target.x_merge_(0) : %f, target.x_merge_(1) : %f, target.length_ : %f, target.width_ : %f\n",
+					target.x_merge_(0), target.x_merge_(1), target.length_, target.width_);
+		fprintf(stderr, "target object dimension (%f, %f)\n",
+					target.object_.dimensions.x, target.object_.dimensions.y);
+	}
 	float xC, yC;
 	// ---------------------------
 	// 预测速度， 与测量方向， 测量方向
-	float yawNew = target.object_.pose.yaw;
+	auto velocity = target.object_[0] - target.object_[3];
+	float yawNew = atan2(velocity.y(), velocity.x());
+	if (target.ukf_id_ == trackId_) { 
+		fprintf(stderr, "yawNew %f\n", yawNew / M_PI * 180);
+	}
 	// ---------------------------
 	float cosYaw = cos(yawNew);
 	float sinYaw = sin(yawNew);
@@ -435,8 +441,7 @@ BBox ImmUkfPda::makeNewBBoxSize(const UKF & target,
 	// (l / 2, w / 2), (l / 2, -w / 2), (-l / 2, -w / 2), (-l / 2, w / 2)
 	float l = length / 2;
 	float w = width / 2;
-	if (l < w)
-	 std::swap(l, w);
+
 	p1.x() = l;
 	p1.y() = w;
 
@@ -458,6 +463,8 @@ BBox ImmUkfPda::makeNewBBoxSize(const UKF & target,
 		res[idx] = tmp;
 	}
 	res.updateCenterAndYaw();  // 更新中心点和角度
+	res.rp = target.object_.rp;
+	res.refIdx = target.refIdx_;
 	return res;
 }
 
@@ -1118,13 +1125,17 @@ void ImmUkfPda::makeOutput(const std::vector<BBox>& input,
 		// tf::Quaternion q = tf::createQuaternionFromYaw(tyaw);
 
 		BBox dd;
-		dd = targets_[i].object_;
 		if (targets_[i].object_.refIdx == -1) 
 				dd.refIdx = targets_[i].refIdx_;
 		// if (targets_[i].width_ < 0.1f || targets_[i].length_ < 0.1f)
 		//   dd = targets_[i].object_;
 		// else
 		//   dd = makeNewBBoxSize(targets_[i], tyaw);     // yyg 跟新新的 bbox 根据长宽高
+		// if (targets_[i].tracking_num_ == TrackingState::Stable) {
+		// 	dd = makeNewBBoxSize(targets_[i], tyaw);
+		// } else {
+			dd = targets_[i].object_;
+		// }
 		dd.id = targets_[i].ukf_id_;
 		dd.velocity.linear.x = tv;
 		dd.acceleration.linear.y = tyaw_rate;

@@ -25,6 +25,7 @@ enum pointType : int
     TRACK = 1,    // 跟踪点
     MARK = 2,     // 标记点
     TRACKHIS = 3, // 历史跟踪 ref 点
+    Cylind = 4, // Cylindrical 点
 };
 enum shapeType : int
 {
@@ -108,6 +109,9 @@ public:
         return point(this->x() + other.x(), this->y() + other.y(), this->z() + other.z());}
     inline point operator*(const float & factor){
         return point(this->x() * factor, this->y() * factor, this->z() * factor);}
+    inline point multiply(const float & factor) {
+        return point(this->x() * factor, this->y() * factor, this->z() * factor);
+    }
 public:
     int classID = -1;
     float toSensor2D = 0.0f;

@@ -70,7 +70,16 @@ public:
                             const Eigen::Vector3f& color = Eigen::Vector3f::Ones(),
                             const GLfloat & pointSize = 1.0,
                             const int numCluster = -1)
-            : _cloud_ptr{cloud}, _color{color}, _pointSize(pointSize), _numCluster(numCluster){}
+            : _cloud_ptr{cloud}, _color{color}, _pointSize(pointSize), _numCluster(numCluster){
+                for (size_t idx = 0; idx < cloud->size(); ++idx) {
+                    auto& pt = (*_cloud_ptr)[idx];
+                    if (pt.ptType == pointType::Cylind) {
+                        Eigen::Vector3f colorTmp;
+                        HSVtoRGB(pt.dist2D(), 100, 100, colorTmp.x(), colorTmp.y(), colorTmp.z());
+                        colors.emplace_back(colorTmp);
+                    }
+                }
+            }
     
     void Draw() const override;
 
@@ -83,8 +92,10 @@ public:
     ~DrawableCloud() override {}
 
     void drawCircle(const float & radius, const int & numPoints) const;
+    void HSVtoRGB(float H, float S, float V, float& R ,float& G, float& B);
 
 private:
+    std::vector<Eigen::Vector3f> colors;
     int _numCluster = -1;
     GLfloat _pointSize = 1.0;
     Cloud::ConstPtr _cloud_ptr = nullptr;

@@ -122,7 +122,9 @@ void DrawableCloud::Draw() const
     // fprintf(stderr, "there has about %ld points\n", _cloud_ptr->size());
     // bool multiColor = ((*_cloud_ptr)[0].classID != -1);
     bool multiColor = (_numCluster != -1);
-    for (const auto & point : _cloud_ptr->points())
+    int ptIdx = 0;
+    float rangeVal = 1.0F; // 10.0m range
+    for (const auto & orPt: _cloud_ptr->points())
     {
         if (!multiColor)
         {
@@ -139,15 +141,21 @@ void DrawableCloud::Draw() const
             glColor3f(0.835f, 0.031f, 0.043f); // 浅红色
         }   
 
-        auto real_point = point.AsEigenVector();
+        auto real_point = orPt.AsEigenVector();
         // 其他的显示点的类型
-        if (point.ptType != pointType::TRACK || point.ptType != pointType::TRACKHIS)
+        if ((orPt.ptType != pointType::Cylind) && (orPt.ptType != pointType::TRACK || orPt.ptType != pointType::TRACKHIS))
         {
-            glVertex3f(real_point.x(), real_point.y(), -1.73f); // 点云二维显示
-            // glVertex3f(real_point.x(), real_point.y(), real_point.z()); // 点云二维显示
+            // glVertex3f(real_point.x(), real_point.y(), -1.73f); // 点云二维显示
+            glVertex3f(real_point.x(), real_point.y(), real_point.z()); // 点云三维显示
             // fprintf(stderr, "real_point.z() %f\n", real_point.z());
+        } else if (orPt.ptType == pointType::Cylind) {
+            point ptTmp = orPt;
+            point pt = ptTmp.multiply((rangeVal / ptTmp.dist2D()));
+            real_point = pt.AsEigenVector();
+            glColor3f(colors[ptIdx].x()/ 255.0F, colors[ptIdx].y() / 255.0F, colors[ptIdx].z() / 255.0F);
+            glVertex3f(real_point.x(), real_point.y(), real_point.z());
         }
-
+        ++ptIdx;
     }
     glEnd();
     glPopMatrix();
@@ -416,6 +424,61 @@ void GetEllipseValue(const float & a,
 	ny = b * sinf(theta);
 	x = nx * cos(roateRad) - ny * sin(roateRad) + meanX;
 	y = nx * sin(roateRad) + ny * cos(roateRad) + meanY;
+}
+
+void DrawableCloud::HSVtoRGB(float H, float S, float V, float& R ,float& G, float& B)
+{
+    if (H <= 1) {
+        H = 1;
+    }
+    if (H >= 70) {
+        H = 70;
+    }
+    H = (H - 1) / 70.0F * 360;
+    if (H > 360 || H < 0 || S > 100 || S <  0 || V > 100 || V < 0) {
+        fprintf(stderr, "The give HSV values are not in valid\n");
+        return;
+    }
+    float RGB_min, RGB_max;
+    int i;
+    RGB_max = V * 2.55f;
+    RGB_min = RGB_max * (100 - S) / 100.0F;
+    i = H / 60.0F;
+    int difs = static_cast<int>(H) % 60;
+    float RGB_Adj = (RGB_max - RGB_min) * difs / 60.0F;
+    switch (i)
+    {
+    case 0:
+        R = RGB_max;
+        G = RGB_min + RGB_Adj;
+        B = RGB_min;
+        break;
+    case 1:
+        R = RGB_max - RGB_Adj;
+        G = RGB_max;
+        B = RGB_min;
+        break;
+    case 2:
+        R = RGB_min;
+        G = RGB_max;
+        B = RGB_min + RGB_Adj;
+    case 3:
+        R = RGB_min;
+        G = RGB_max - RGB_Adj;
+        B = RGB_max;
+        break;
+    case 4:
+        R = RGB_min + RGB_Adj;
+        G = RGB_min;
+        B = RGB_max;
+        break;
+    default:
+        R = RGB_max;
+        G = RGB_min;
+        B = RGB_max - RGB_Adj;
+        break;    
+    }
+
 }
 
 void DrawableEllipse::Draw() const

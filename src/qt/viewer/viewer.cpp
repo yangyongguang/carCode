@@ -25,7 +25,7 @@ void Viewer::Clear()
 void Viewer::draw() 
 {
     // 坐标原点
-    QGLViewer::drawAxis(sceneRadius() / 40.0);
+    // QGLViewer::drawAxis(sceneRadius() / 40.0);
     // 绘制自车
     // glEnable(GL_LINE_STIPPLE);
     // glLineStipple(2, 0x3F3F);
@@ -242,15 +242,16 @@ void Viewer::displayText()
 
         QString velocityStr = QString::number(v, 'g', 2) + " km/h";
         const qglviewer::Vec point2d = camera()->projectedCoordinatesOf(qglviewer::Vec(x - 0.3, y - 0.3, z));
-        QGLViewer::drawText(point2d.x, point2d.y, velocityStr, ft);
+        //QGLViewer::drawText(point2d.x, point2d.y, velocityStr, ft);
+	renderText(x, y, z, velocityStr, ft);
 
         // 显示角度信息        
         point ArrowTo;
         ArrowTo.x() = x + 0.3 * v * cos(yaw);
         ArrowTo.y() = y + 0.3 * v * sin(yaw);
         glColor3f(0.0f, 1.0f, 0.0f);
-        QGLViewer::drawArrow(qglviewer::Vec(x, y, z), qglviewer::Vec(ArrowTo.x(), ArrowTo.y(), z), 0.045);
-
+        //QGLViewer::drawArrow(qglviewer::Vec(x, y, z), qglviewer::Vec(ArrowTo.x(), ArrowTo.y(), z), 0.045);
+	QGLWidget::renderText(x, y, z, velocityStr, ft);
         glColor3f(1.0f, 1.0f, 1.0f);
         if (showCorner_) {
             for (size_t ptIdx = 0; ptIdx < 4U; ++ptIdx) {
@@ -446,8 +447,8 @@ void Viewer::init()
     // glLoadIdentity();
     glClear(GL_COLOR_BUFFER_BIT);
     // 如果想要黑色 设置为 0.0, 0.0, 0.0,  如果想要白色为 255, 255, 255
-    // setBackgroundColor(QColor(255, 255, 255));
-    setBackgroundColor(QColor(1, 0, 1));
+    setBackgroundColor(QColor(200, 200, 200));
+    // setBackgroundColor(QColor(1, 0, 1));
     setSceneRadius(50.0);
     // fprintf(stderr, "setBackgroundColor(QColor(1, 1, 1));\n");
     camera()->showEntireScene();
